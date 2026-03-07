@@ -1,0 +1,36 @@
+version: "2"
+
+run:
+  timeout: 5m
+  go: '1.24'
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    gofmt:
+      simplify: true
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+
+  settings:
+    govet:
+      enable:
+        - shadow
+    errcheck:
+      check-type-assertions: true
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck

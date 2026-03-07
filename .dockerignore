@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+bridge
+*.exe
+
+# Test artifacts
+coverage.out
+coverage.html
+
+# Documentation
+*.md
+!go.mod
+!go.sum
+
+# Docker files (avoid recursive builds)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Local development
+.env
+.env.local

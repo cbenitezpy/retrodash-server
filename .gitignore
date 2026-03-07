@@ -1,0 +1,32 @@
+# Binaries (only at root, not cmd/bridge/)
+/bridge
+*.exe
+*.test
+*.out
+
+# Coverage
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Data (may contain sensitive config)
+data/origins.json
+
+# Logs
+*.log
+
+# Vendor (if used)
+vendor/

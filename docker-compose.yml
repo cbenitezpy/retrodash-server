@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DASHBOARD_URL=${DASHBOARD_URL:-http://host.docker.internal:3000}
+      - PORT=8080
+      - FPS=${FPS:-15}
+      - JPEG_QUALITY_HIGH=${JPEG_QUALITY_HIGH:-85}
+      - JPEG_QUALITY_LOW=${JPEG_QUALITY_LOW:-50}
+      - VIEWPORT_WIDTH=${VIEWPORT_WIDTH:-1920}
+      - VIEWPORT_HEIGHT=${VIEWPORT_HEIGHT:-1080}
+    # Increase shared memory for Chrome
+    shm_size: '256mb'
+    # Security options for running Chrome
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
