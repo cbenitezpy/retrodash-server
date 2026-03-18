@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/api"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/config"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/health"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/logging"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/origins"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/stream"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/switching"
-	"github.com/cbenitezpy-ueno/retrodash/server/internal/terminal"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/api"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/config"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/health"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/logging"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/origins"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/stream"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/switching"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/terminal"
 )
 
 func main() {
