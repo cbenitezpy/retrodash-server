@@ -1,0 +1,116 @@
+# RetroDash Bridge Helm Chart Values
+# Full documentation: https://github.com/cbenitezpy-ueno/retrodash-server
+
+image:
+  repository: ghcr.io/cbenitezpy-ueno/retrodash-server
+  tag: ""  # Defaults to Chart appVersion
+  pullPolicy: IfNotPresent
+
+# Environment variables for the Bridge server
+env:
+  # REQUIRED: URL of the dashboard to stream
+  DASHBOARD_URL: "https://grafana.example.com/d/your-dashboard"
+  # Server port (must match service.port)
+  PORT: "8080"
+  # Frames per second for MJPEG stream
+  FPS: "15"
+  # Browser viewport dimensions
+  VIEWPORT_WIDTH: "1920"
+  VIEWPORT_HEIGHT: "1080"
+  # JPEG quality (0-100)
+  JPEG_QUALITY_HIGH: "85"
+  JPEG_QUALITY_LOW: "50"
+  # Origins file path (must match persistence.mountPath)
+  ORIGINS_FILE: "./data/origins.json"
+
+# Resource requests and limits
+# ChromeDP (headless Chrome) requires significant memory.
+# Minimum recommended: 512Mi for simple dashboards.
+# For dashboards with 10+ panels, use at least 1Gi.
+resources:
+  requests:
+    cpu: 500m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# Persistence for origin configuration
+persistence:
+  enabled: true
+  storageClass: ""  # Use default StorageClass
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  mountPath: /app/data
+
+# Shared memory for Chrome
+# Chrome needs /dev/shm larger than the default 64Mi
+shm:
+  sizeLimit: 256Mi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Ingress configuration (optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: retrodash.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Liveness probe - checks if Go process is alive
+# MUST NOT check dependencies to avoid cascade restarts
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Readiness probe - checks if browser is ready
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 6
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false  # Chrome needs to write to tmp dirs
+  capabilities:
+    drop:
+      - ALL
+
+# Deployment strategy - Recreate because single-replica stateful
+strategy:
+  type: Recreate
+
+# Graceful shutdown timeout (seconds)
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: retrodash-bridge
+description: RetroDash Bridge - Stream dashboards as MJPEG to retro devices
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: cbenitez
+    email: cbenitez@gmail.com
+keywords:
+  - retrodash
+  - grafana
+  - mjpeg
+  - streaming
+home: https://github.com/cbenitezpy-ueno/retrodash-server
+sources:
+  - https://github.com/cbenitezpy-ueno/retrodash-server

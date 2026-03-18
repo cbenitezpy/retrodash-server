@@ -1,0 +1,28 @@
+RetroDash Bridge has been deployed!
+
+{{- if .Values.ingress.enabled }}
+Access the stream at:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/stream
+{{- end }}
+{{- else }}
+To access the MJPEG stream, run:
+
+  kubectl port-forward svc/{{ include "retrodash-bridge.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+Then open in your browser:
+
+  http://localhost:{{ .Values.service.port }}/stream
+
+{{- end }}
+
+Health endpoints:
+  /healthz  - Liveness probe (K8s)
+  /readyz   - Readiness probe (K8s)
+  /health   - Full diagnostics (JSON)
+  /metrics  - Prometheus metrics
+
+API endpoints:
+  /api/origins          - List/create origins
+  /api/origins/{id}     - Get/update/delete origin
+  /api/origins/{id}/connect - Switch to origin

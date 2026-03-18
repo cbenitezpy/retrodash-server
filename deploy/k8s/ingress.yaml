@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: retrodash-bridge
+  labels:
+    app.kubernetes.io/name: retrodash-bridge
+    app.kubernetes.io/part-of: retrodash
+  annotations:
+    # Uncomment and adjust for your ingress controller:
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  # ingressClassName: nginx
+  rules:
+    - host: retrodash.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: retrodash-bridge
+                port:
+                  name: http

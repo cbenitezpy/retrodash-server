@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "retrodash-bridge.fullname" . }}
+  labels:
+    {{- include "retrodash-bridge.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "retrodash-bridge.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "retrodash-bridge.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: DASHBOARD_URL
+              value: {{ required "env.DASHBOARD_URL is required. Set it with --set env.DASHBOARD_URL=https://your-grafana/d/dashboard" .Values.env.DASHBOARD_URL | quote }}
+            {{- range $key, $value := .Values.env }}
+            {{- if ne $key "DASHBOARD_URL" }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "retrodash-bridge.fullname" . }}-data
+        {{- end }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.shm.sizeLimit }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

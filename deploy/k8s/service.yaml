@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: retrodash-bridge
+  labels:
+    app.kubernetes.io/name: retrodash-bridge
+    app.kubernetes.io/part-of: retrodash
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: retrodash-bridge

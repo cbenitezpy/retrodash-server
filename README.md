@@ -8,6 +8,10 @@ Go-based MJPEG streaming server using ChromeDP for headless browser automation. 
 - MJPEG streaming with quality selection (high/low)
 - Multi-source switching (dashboards, SSH terminals, local commands)
 - Touch event relay (tap, drag)
+- Kubernetes-native health probes (`/healthz`, `/readyz`)
+- Prometheus metrics endpoint (`/metrics`)
+- Structured JSON logging with configurable log level
+- Helm chart and Kustomize manifests for K8s deployment
 - Health check endpoint
 - Auto-recovery from browser crashes
 - Origin management API (CRUD)
@@ -98,6 +102,64 @@ After the first successful publish, the package defaults to private. To make it 
 3. Under **Danger Zone**, click **Change visibility**
 4. Select **Public** and confirm
 
+## Kubernetes
+
+### Helm (recommended)
+
+```bash
+# Install from OCI registry
+helm install retrodash-bridge \
+  oci://ghcr.io/cbenitezpy-ueno/charts/retrodash-bridge \
+  --set env.DASHBOARD_URL=https://grafana.example.com/d/your-dashboard
+
+# Verify pod is ready
+kubectl get pods -l app.kubernetes.io/name=retrodash-bridge -w
+
+# Access the stream
+kubectl port-forward svc/retrodash-bridge 8080:8080
+open http://localhost:8080/stream
+```
+
+### Helm with custom values
+
+```bash
+helm install retrodash-bridge \
+  oci://ghcr.io/cbenitezpy-ueno/charts/retrodash-bridge \
+  --set env.DASHBOARD_URL=https://grafana.example.com/d/your-dashboard \
+  --set resources.limits.memory=2Gi \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=retrodash.example.com \
+  --set "ingress.hosts[0].paths[0].path=/" \
+  --set "ingress.hosts[0].paths[0].pathType=Prefix"
+```
+
+### Kustomize
+
+```bash
+# Clone this repo
+git clone https://github.com/cbenitezpy-ueno/retrodash-server.git
+cd retrodash-server
+
+# Edit deploy/k8s/deployment.yaml and set DASHBOARD_URL
+kubectl apply -k deploy/k8s/
+```
+
+### Uninstall
+
+```bash
+helm uninstall retrodash-bridge
+# PVC is retained to protect data. To remove:
+kubectl delete pvc retrodash-bridge-data
+```
+
+### Health Probes
+
+| Endpoint | Purpose | Used by |
+|----------|---------|---------|
+| `/healthz` | Liveness — is the process alive? | `livenessProbe` |
+| `/readyz` | Readiness — is the browser ready? | `readinessProbe` |
+| `/metrics` | Prometheus metrics | Prometheus scrape |
+
 ## Configuration
 
 All configuration is via environment variables:
@@ -114,8 +176,21 @@ All configuration is via environment variables:
 | `CHROME_PATH` | No | auto-detect | Path to Chrome/Chromium binary |
 | `AUTH_COOKIES` | No | - | Cookies for authenticated dashboards |
 | `ORIGINS_FILE` | No | `./data/origins.json` | Path to origins config file |
+| `LOG_LEVEL` | No | `INFO` | Log level: DEBUG, INFO, WARN, ERROR |
 
 ## API Endpoints
+
+### GET /healthz
+
+Kubernetes liveness probe. Returns `200 "ok"` if the server process is alive.
+
+### GET /readyz
+
+Kubernetes readiness probe. Returns `200 "ok"` when the browser is ready, `503 "not ready"` otherwise.
+
+### GET /metrics
+
+Prometheus metrics in text exposition format. Includes custom metrics (`retrodash_*`) and Go runtime metrics.
 
 ### GET /health
 
@@ -193,6 +268,9 @@ retrodash-server/
 │   └── terminal/        # Terminal/SSH rendering
 ├── pkg/types/           # Shared types
 ├── data/                # Runtime data (origins config)
+├── deploy/
+│   ├── helm/            # Helm chart for Kubernetes
+│   └── k8s/             # Kustomize manifests
 ├── Dockerfile           # Multi-stage Docker build
 ├── docker-compose.yml   # Docker Compose config
 └── Makefile             # Build automation

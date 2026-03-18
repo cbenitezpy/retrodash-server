@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retrodash-bridge
+  labels:
+    app.kubernetes.io/name: retrodash-bridge
+    app.kubernetes.io/part-of: retrodash
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: retrodash-bridge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: retrodash-bridge
+        app.kubernetes.io/part-of: retrodash
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: bridge
+          image: ghcr.io/cbenitezpy-ueno/retrodash-server:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: DASHBOARD_URL
+              value: "https://grafana.example.com/d/your-dashboard"
+            - name: PORT
+              value: "8080"
+            - name: FPS
+              value: "15"
+            - name: VIEWPORT_WIDTH
+              value: "1920"
+            - name: VIEWPORT_HEIGHT
+              value: "1080"
+            - name: JPEG_QUALITY_HIGH
+              value: "85"
+            - name: JPEG_QUALITY_LOW
+              value: "50"
+            - name: ORIGINS_FILE
+              value: "./data/origins.json"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: retrodash-bridge-data
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
