@@ -45,11 +45,15 @@ func TestLoad_ValidConfig(t *testing.T) {
 	assert.Equal(t, "/usr/bin/chromium", cfg.ChromePath)
 }
 
-func TestLoad_MissingDashboardURL(t *testing.T) {
+func TestLoad_EmptyDashboardURL_StandbyMode(t *testing.T) {
 	t.Setenv("DASHBOARD_URL", "")
 
-	_, err := Load()
-	assert.ErrorIs(t, err, ErrMissingDashboardURL)
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Empty(t, cfg.DashboardURL)
+	// Should use defaults for all other fields
+	assert.Equal(t, 8080, cfg.Port)
+	assert.Equal(t, 15, cfg.FPS)
 }
 
 func TestLoad_InvalidDashboardURL(t *testing.T) {
@@ -173,6 +177,21 @@ func TestValidate_InvalidAspectRatio(t *testing.T) {
 	cfg.ViewportWidth = 3840
 	cfg.ViewportHeight = 500
 	assert.ErrorIs(t, Validate(cfg), ErrInvalidAspectRatio)
+}
+
+func TestValidate_StandbyMode_EmptyDashboardURL(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.DashboardURL = ""
+
+	assert.NoError(t, Validate(cfg))
+}
+
+func TestValidate_StandbyMode_InvalidPort(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.DashboardURL = ""
+	cfg.Port = 0
+
+	assert.ErrorIs(t, Validate(cfg), ErrInvalidPort)
 }
 
 func TestValidate_ValidConfig(t *testing.T) {

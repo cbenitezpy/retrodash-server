@@ -27,7 +27,7 @@ type ClientCounter interface {
 
 // ModeProvider provides current mode information.
 type ModeProvider interface {
-	IsBrowserMode() bool
+	Mode() string
 }
 
 // Checker performs health checks.
@@ -39,7 +39,6 @@ type Checker struct {
 }
 
 // NewChecker creates a new health checker.
-// The modeProvider should implement IsBrowserMode() for dynamic mode detection.
 func NewChecker(provider StatusProvider, clients ClientCounter, modeProvider ModeProvider) *Checker {
 	return &Checker{
 		startTime:     time.Now(),
@@ -51,23 +50,25 @@ func NewChecker(provider StatusProvider, clients ClientCounter, modeProvider Mod
 
 // Check returns the current health status.
 func (c *Checker) Check() types.HealthResponse {
+	// Capture mode once to avoid multiple interface calls
+	var mode string
+	if c.modeProvider != nil {
+		mode = c.modeProvider.Mode()
+	}
+
 	resp := types.HealthResponse{
 		Version: Version,
 		Uptime:  int64(time.Since(c.startTime).Seconds()),
-	}
-
-	// Set current mode dynamically
-	if c.modeProvider != nil {
-		if c.modeProvider.IsBrowserMode() {
-			resp.Mode = "browser"
-		} else {
-			resp.Mode = "terminal"
-		}
+		Mode:    mode,
 	}
 
 	// Check provider status
 	if c.provider != nil {
-		if c.provider.IsReady() {
+		if mode == "standby" {
+			// Standby mode: server is healthy, waiting for configuration
+			resp.Status = "ok"
+			resp.BrowserStatus = "waiting_for_config"
+		} else if c.provider.IsReady() {
 			resp.Status = "ok"
 			resp.BrowserStatus = "ready"
 		} else {
@@ -82,6 +83,9 @@ func (c *Checker) Check() types.HealthResponse {
 		}
 	} else {
 		resp.Status = "ok"
+		if mode == "standby" {
+			resp.BrowserStatus = "waiting_for_config"
+		}
 	}
 
 	// Add client count if available

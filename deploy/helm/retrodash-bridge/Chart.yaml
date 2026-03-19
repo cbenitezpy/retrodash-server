@@ -12,6 +12,6 @@ keywords:
   - grafana
   - mjpeg
   - streaming
-home: https://github.com/cbenitezpy-ueno/retrodash-server
+home: https://github.com/cbenitezpy-ueno/retrodash
 sources:
-  - https://github.com/cbenitezpy-ueno/retrodash-server
+  - https://github.com/cbenitezpy-ueno/retrodash

@@ -17,11 +17,14 @@ import (
 
 // mockTouchModeProvider implements health.ModeProvider for touch tests
 type mockTouchModeProvider struct {
-	browserMode bool
+	mode string
 }
 
-func (m *mockTouchModeProvider) IsBrowserMode() bool {
-	return m.browserMode
+func (m *mockTouchModeProvider) Mode() string {
+	if m.mode != "" {
+		return m.mode
+	}
+	return "browser"
 }
 
 // mockTouchBrowser implements browser.Browser for touch testing.
@@ -69,7 +72,7 @@ func (m *mockTouchBrowser) ViewportSize() (width, height int) {
 func TestTouchHandler_ValidTouch(t *testing.T) {
 	mockBrowser := newMockTouchBrowser()
 	touchHandler := browser.NewTouchHandler(mockBrowser)
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 	handlers.SetTouchHandler(touchHandler)
 
 	// Send TouchStart first
@@ -104,7 +107,7 @@ func TestTouchHandler_ValidTouch(t *testing.T) {
 }
 
 func TestTouchHandler_MethodNotAllowed(t *testing.T) {
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 
 	req := httptest.NewRequest(http.MethodGet, "/touch", nil)
 	rec := httptest.NewRecorder()
@@ -115,7 +118,7 @@ func TestTouchHandler_MethodNotAllowed(t *testing.T) {
 }
 
 func TestTouchHandler_NoHandler(t *testing.T) {
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 	// touchHandler not set
 
 	event := types.TouchEvent{X: 0.5, Y: 0.5, Type: types.TouchStart}
@@ -132,7 +135,7 @@ func TestTouchHandler_NoHandler(t *testing.T) {
 func TestTouchHandler_InvalidJSON(t *testing.T) {
 	mockBrowser := newMockTouchBrowser()
 	touchHandler := browser.NewTouchHandler(mockBrowser)
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 	handlers.SetTouchHandler(touchHandler)
 
 	req := httptest.NewRequest(http.MethodPost, "/touch", bytes.NewReader([]byte("invalid json")))
@@ -150,7 +153,7 @@ func TestTouchHandler_InvalidJSON(t *testing.T) {
 func TestTouchHandler_InvalidCoordinates(t *testing.T) {
 	mockBrowser := newMockTouchBrowser()
 	touchHandler := browser.NewTouchHandler(mockBrowser)
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 	handlers.SetTouchHandler(touchHandler)
 
 	tests := []struct {
@@ -199,7 +202,7 @@ func TestTouchHandler_ValidCoordinates(t *testing.T) {
 			// Fresh browser and handler for each test
 			mockBrowser := newMockTouchBrowser()
 			touchHandler := browser.NewTouchHandler(mockBrowser)
-			handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+			handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 			handlers.SetTouchHandler(touchHandler)
 
 			// Send TouchStart
@@ -227,7 +230,7 @@ func TestTouchHandler_ValidCoordinates(t *testing.T) {
 func TestTouchHandler_AllEventTypes(t *testing.T) {
 	mockBrowser := newMockTouchBrowser()
 	touchHandler := browser.NewTouchHandler(mockBrowser)
-	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{browserMode: true}))
+	handlers := NewHandlers(health.NewChecker(nil, nil, &mockTouchModeProvider{mode: "browser"}))
 	handlers.SetTouchHandler(touchHandler)
 
 	eventTypes := []types.TouchEventType{types.TouchStart, types.TouchMove, types.TouchEnd}

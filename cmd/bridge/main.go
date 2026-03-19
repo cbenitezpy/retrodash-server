@@ -48,11 +48,15 @@ func main() {
 
 	// Determine initial mode
 	var mode string
-	if terminal.IsCommandURL(cfg.DashboardURL) {
+	switch {
+	case cfg.DashboardURL == "":
+		mode = "standby"
+		log.Println("Standby mode: waiting for origin configuration via API")
+	case terminal.IsCommandURL(cfg.DashboardURL):
 		mode = "terminal"
 		cmd, _, _ := terminal.ParseCommandURL(cfg.DashboardURL)
 		log.Printf("Terminal mode: running command '%s'", cmd)
-	} else {
+	default:
 		mode = "browser"
 		log.Println("Browser mode: rendering dashboard")
 	}
@@ -60,13 +64,15 @@ func main() {
 	// Create source switcher for dynamic origin switching
 	sourceSwitcher := switching.NewSourceSwitcher(cfg, originManager)
 
-	// Start initial source with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	if err := sourceSwitcher.StartInitialSource(ctx); err != nil {
+	// Start initial source with timeout (no-op in standby mode)
+	if cfg.DashboardURL != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		if err := sourceSwitcher.StartInitialSource(ctx); err != nil {
+			cancel()
+			log.Fatalf("Failed to start initial source: %v", err)
+		}
 		cancel()
-		log.Fatalf("Failed to start initial source: %v", err)
 	}
-	cancel()
 
 	// Create stream components
 	encoder := stream.NewEncoder(cfg.JPEGQualityHigh, cfg.JPEGQualityLow)
@@ -108,7 +114,7 @@ func main() {
 	// Create HTTP server
 	srv := api.NewServer(cfg)
 	srv.SetMetrics(metrics)
-	srv.RegisterHealthRoutes(sourceSwitcher)
+	srv.RegisterHealthRoutes(sourceSwitcher, sourceSwitcher)
 
 	// Create handlers
 	handlers := api.NewHandlers(healthChecker)

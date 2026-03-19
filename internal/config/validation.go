@@ -10,8 +10,6 @@ import (
 )
 
 var (
-	// ErrMissingDashboardURL indicates DASHBOARD_URL is not set.
-	ErrMissingDashboardURL = errors.New("DASHBOARD_URL is required")
 	// ErrInvalidDashboardURL indicates DASHBOARD_URL is not a valid URL.
 	ErrInvalidDashboardURL = errors.New("DASHBOARD_URL must be a valid HTTP(S) URL or cmd:// command")
 	// ErrInvalidPort indicates PORT is out of range.
@@ -30,9 +28,10 @@ var (
 
 // Validate checks the configuration for errors.
 func Validate(cfg *Config) error {
-	// Required: DASHBOARD_URL
+	// Validate URL format only if DASHBOARD_URL is set (empty = standby mode)
 	if cfg.DashboardURL == "" {
-		return ErrMissingDashboardURL
+		// Standby mode: no initial source, waiting for origin configuration
+		return validateNonURLFields(cfg)
 	}
 
 	// Validate URL format (http(s):// or cmd://)
@@ -58,6 +57,11 @@ func Validate(cfg *Config) error {
 		}
 	}
 
+	return validateNonURLFields(cfg)
+}
+
+// validateNonURLFields validates all configuration fields except DASHBOARD_URL.
+func validateNonURLFields(cfg *Config) error {
 	// Validate PORT
 	if cfg.Port < 1 || cfg.Port > 65535 {
 		return fmt.Errorf("%w: %d", ErrInvalidPort, cfg.Port)

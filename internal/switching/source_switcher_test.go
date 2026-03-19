@@ -10,6 +10,7 @@ import (
 	"github.com/cbenitezpy-ueno/retrodash-server/internal/browser"
 	"github.com/cbenitezpy-ueno/retrodash-server/internal/config"
 	"github.com/cbenitezpy-ueno/retrodash-server/internal/origins"
+	"github.com/cbenitezpy-ueno/retrodash-server/internal/terminal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,6 +47,88 @@ func TestNewSourceSwitcher(t *testing.T) {
 	assert.Nil(t, sw.terminal)
 }
 
+func TestStartInitialSource_EmptyDashboardURL(t *testing.T) {
+	cfg := &config.Config{
+		DashboardURL:   "",
+		ViewportWidth:  1920,
+		ViewportHeight: 1080,
+	}
+	sw := NewSourceSwitcher(cfg, nil)
+
+	err := sw.StartInitialSource(context.Background())
+
+	assert.NoError(t, err)
+	assert.Nil(t, sw.GetProvider())
+}
+
+func TestMode_Standby(t *testing.T) {
+	cfg := &config.Config{}
+	sw := NewSourceSwitcher(cfg, nil)
+
+	mode := sw.Mode()
+
+	assert.Equal(t, "standby", mode)
+}
+
+func TestMode_WithBrowser(t *testing.T) {
+	cfg := &config.Config{}
+	sw := NewSourceSwitcher(cfg, nil)
+
+	// Simulate browser mode
+	mockBrowser := browser.NewChromeBrowser(&config.Config{
+		DashboardURL:   "http://example.com",
+		ViewportWidth:  800,
+		ViewportHeight: 600,
+	})
+	sw.mu.Lock()
+	sw.chromeBrowser = mockBrowser
+	sw.currentProvider = mockBrowser
+	sw.mu.Unlock()
+
+	mode := sw.Mode()
+
+	assert.Equal(t, "browser", mode)
+}
+
+func TestMode_WithTerminal(t *testing.T) {
+	cfg := &config.Config{
+		ViewportWidth:  800,
+		ViewportHeight: 600,
+	}
+	sw := NewSourceSwitcher(cfg, nil)
+
+	// Use a mock terminal by setting the terminal field directly via a helper.
+	// We create a terminal.New() without starting it, then set it as the current provider.
+	term := terminal.New(&terminal.Config{
+		Command: "echo",
+		Args:    []string{"hello"},
+		Width:   800,
+		Height:  600,
+	})
+	sw.mu.Lock()
+	sw.terminal = term
+	sw.currentProvider = term
+	sw.mu.Unlock()
+
+	mode := sw.Mode()
+	assert.Equal(t, "terminal", mode)
+}
+
+func TestMode_WithMockProvider(t *testing.T) {
+	cfg := &config.Config{}
+	sw := NewSourceSwitcher(cfg, nil)
+
+	// When currentProvider is set but it's not a browser or terminal,
+	// it should return standby since we can't set terminal without starting it
+	sw.mu.Lock()
+	sw.currentProvider = &mockFrameProvider{ready: true}
+	sw.mu.Unlock()
+
+	mode := sw.Mode()
+
+	assert.Equal(t, "standby", mode)
+}
+
 func TestGetProvider_InitiallyNil(t *testing.T) {
 	cfg := &config.Config{}
 	sw := NewSourceSwitcher(cfg, nil)
@@ -62,15 +145,6 @@ func TestGetTouchHandler_InitiallyNil(t *testing.T) {
 	handler := sw.GetTouchHandler()
 
 	assert.Nil(t, handler)
-}
-
-func TestIsBrowserMode_InitiallyFalse(t *testing.T) {
-	cfg := &config.Config{}
-	sw := NewSourceSwitcher(cfg, nil)
-
-	isBrowser := sw.IsBrowserMode()
-
-	assert.False(t, isBrowser)
 }
 
 func TestIsReady_NoProvider(t *testing.T) {

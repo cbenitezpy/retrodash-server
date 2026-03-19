@@ -15,15 +15,18 @@ import (
 
 // mockStreamModeProvider implements health.ModeProvider for stream tests
 type mockStreamModeProvider struct {
-	browserMode bool
+	mode string
 }
 
-func (m *mockStreamModeProvider) IsBrowserMode() bool {
-	return m.browserMode
+func (m *mockStreamModeProvider) Mode() string {
+	if m.mode != "" {
+		return m.mode
+	}
+	return "browser"
 }
 
 func TestStreamHandler_NoBroadcaster(t *testing.T) {
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 	// broadcaster not set
 
@@ -36,7 +39,7 @@ func TestStreamHandler_NoBroadcaster(t *testing.T) {
 }
 
 func TestStreamHandler_MethodNotAllowed(t *testing.T) {
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 
 	req := httptest.NewRequest(http.MethodPost, "/stream", nil)
@@ -49,7 +52,7 @@ func TestStreamHandler_MethodNotAllowed(t *testing.T) {
 
 func TestStreamHandler_Quality(t *testing.T) {
 	broadcaster := stream.NewBroadcaster(stream.DefaultEncoder())
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 	handlers.SetBroadcaster(broadcaster)
 
@@ -87,7 +90,7 @@ func TestStreamHandler_Quality(t *testing.T) {
 
 func TestStreamHandler_Headers(t *testing.T) {
 	broadcaster := stream.NewBroadcaster(stream.DefaultEncoder())
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 	handlers.SetBroadcaster(broadcaster)
 	handlers.clientIDGen = func() string { return "test" }
@@ -111,7 +114,7 @@ func TestStreamHandler_Headers(t *testing.T) {
 
 func TestStreamHandler_ClientCleanup(t *testing.T) {
 	broadcaster := stream.NewBroadcaster(stream.DefaultEncoder())
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 	handlers.SetBroadcaster(broadcaster)
 	handlers.clientIDGen = func() string { return "cleanup-test" }
@@ -135,7 +138,7 @@ func TestStreamHandler_ClientCleanup(t *testing.T) {
 
 func TestStreamHandler_ReceivesFrames(t *testing.T) {
 	broadcaster := stream.NewBroadcaster(stream.DefaultEncoder())
-	modeProvider := &mockStreamModeProvider{browserMode: true}
+	modeProvider := &mockStreamModeProvider{mode: "browser"}
 	handlers := NewHandlers(health.NewChecker(nil, nil, modeProvider))
 	handlers.SetBroadcaster(broadcaster)
 	handlers.clientIDGen = func() string { return "frame-test" }

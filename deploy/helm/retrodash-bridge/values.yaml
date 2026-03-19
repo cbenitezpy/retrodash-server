@@ -1,8 +1,8 @@
 # RetroDash Bridge Helm Chart Values
-# Full documentation: https://github.com/cbenitezpy-ueno/retrodash-server
+# Full documentation: https://github.com/cbenitezpy-ueno/retrodash
 
 image:
-  repository: ghcr.io/cbenitezpy-ueno/retrodash-server
+  repository: ghcr.io/cbenitezpy-ueno/retrodash-bridge
   tag: ""  # Defaults to Chart appVersion
   pullPolicy: IfNotPresent
 
@@ -30,7 +30,7 @@ env:
 resources:
   requests:
     cpu: 500m
-    memory: 512Mi
+    memory: 256Mi
   limits:
     cpu: "1"
     memory: 1Gi
@@ -58,9 +58,7 @@ service:
 ingress:
   enabled: false
   className: ""
-  annotations:
-    {}
-    # To enable proxy timeouts, replace {} above with:
+  annotations: {}
     # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   hosts:

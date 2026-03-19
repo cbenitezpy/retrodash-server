@@ -19,6 +19,15 @@ type mockStatusProvider struct{ ready bool }
 
 func (m *mockStatusProvider) IsReady() bool { return m.ready }
 
+type mockServerModeProvider struct{ mode string }
+
+func (m *mockServerModeProvider) Mode() string {
+	if m.mode != "" {
+		return m.mode
+	}
+	return "browser"
+}
+
 func TestNewServer(t *testing.T) {
 	cfg := &config.Config{
 		Port:            8080,
@@ -273,7 +282,7 @@ func TestServer_RegisterHealthRoutes(t *testing.T) {
 	srv.SetMetrics(m)
 
 	provider := &mockStatusProvider{ready: true}
-	srv.RegisterHealthRoutes(provider)
+	srv.RegisterHealthRoutes(provider, &mockServerModeProvider{mode: "browser"})
 
 	t.Run("GET /healthz returns 200 ok", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

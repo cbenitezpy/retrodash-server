@@ -53,9 +53,9 @@ func (s *Server) SetMetrics(m *health.Metrics) {
 }
 
 // RegisterHealthRoutes registers the Kubernetes health probe and Prometheus metrics endpoints.
-func (s *Server) RegisterHealthRoutes(provider health.StatusProvider) {
+func (s *Server) RegisterHealthRoutes(provider health.StatusProvider, modeProvider health.ModeProvider) {
 	s.mux.HandleFunc("/healthz", health.LivenessHandler())
-	s.mux.HandleFunc("/readyz", health.ReadinessHandler(provider))
+	s.mux.HandleFunc("/readyz", health.ReadinessHandler(provider, modeProvider))
 	if s.metrics != nil {
 		s.mux.Handle("/metrics", promhttp.HandlerFor(s.metrics.Registry(), promhttp.HandlerOpts{}))
 	}

@@ -33,17 +33,20 @@ func (m *MockClientCounter) ActiveClients() int {
 
 // MockModeProvider implements ModeProvider
 type MockModeProvider struct {
-	browserMode bool
+	mode string
 }
 
-func (m *MockModeProvider) IsBrowserMode() bool {
-	return m.browserMode
+func (m *MockModeProvider) Mode() string {
+	if m.mode != "" {
+		return m.mode
+	}
+	return "browser"
 }
 
 func TestNewChecker(t *testing.T) {
 	provider := &MockStatusProvider{ready: true}
 	clients := &MockClientCounter{count: 5}
-	modeProvider := &MockModeProvider{browserMode: true}
+	modeProvider := &MockModeProvider{mode: "browser"}
 
 	checker := NewChecker(provider, clients, modeProvider)
 	assert.NotNil(t, checker)
@@ -57,7 +60,7 @@ func TestCheck(t *testing.T) {
 	t.Run("Healthy with all dependencies", func(t *testing.T) {
 		provider := &MockStatusProvider{ready: true}
 		clients := &MockClientCounter{count: 5}
-		modeProvider := &MockModeProvider{browserMode: true}
+		modeProvider := &MockModeProvider{mode: "browser"}
 		checker := NewChecker(provider, clients, modeProvider)
 		// Simulate some uptime
 		time.Sleep(10 * time.Millisecond)
@@ -76,7 +79,7 @@ func TestCheck(t *testing.T) {
 	t.Run("Unhealthy provider", func(t *testing.T) {
 		provider := &MockStatusProvider{ready: false, lastError: errors.New("browser crashed")}
 		clients := &MockClientCounter{count: 0}
-		modeProvider := &MockModeProvider{browserMode: true}
+		modeProvider := &MockModeProvider{mode: "browser"}
 		checker := NewChecker(provider, clients, modeProvider)
 
 		resp := checker.Check()
@@ -87,13 +90,38 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("No provider", func(t *testing.T) {
-		modeProvider := &MockModeProvider{browserMode: false}
+		modeProvider := &MockModeProvider{mode: "terminal"}
 		checker := NewChecker(nil, nil, modeProvider)
 		resp := checker.Check()
 
 		assert.Equal(t, "ok", resp.Status)
 		assert.Equal(t, "terminal", resp.Mode)
 		assert.Equal(t, 0, resp.ActiveClients)
+	})
+
+	t.Run("Standby mode with provider", func(t *testing.T) {
+		provider := &MockStatusProvider{ready: false}
+		clients := &MockClientCounter{count: 0}
+		modeProvider := &MockModeProvider{mode: "standby"}
+		checker := NewChecker(provider, clients, modeProvider)
+
+		resp := checker.Check()
+
+		assert.Equal(t, "ok", resp.Status)
+		assert.Equal(t, "standby", resp.Mode)
+		assert.Equal(t, "waiting_for_config", resp.BrowserStatus)
+		assert.Empty(t, resp.LastError)
+	})
+
+	t.Run("Standby mode without provider", func(t *testing.T) {
+		modeProvider := &MockModeProvider{mode: "standby"}
+		checker := NewChecker(nil, nil, modeProvider)
+
+		resp := checker.Check()
+
+		assert.Equal(t, "ok", resp.Status)
+		assert.Equal(t, "standby", resp.Mode)
+		assert.Equal(t, "waiting_for_config", resp.BrowserStatus)
 	})
 }
 
@@ -108,7 +136,7 @@ func (s *SimpleStatusProvider) IsReady() bool {
 
 func TestCheck_SimpleProvider(t *testing.T) {
 	provider := &SimpleStatusProvider{ready: false}
-	modeProvider := &MockModeProvider{browserMode: true}
+	modeProvider := &MockModeProvider{mode: "browser"}
 	checker := NewChecker(provider, nil, modeProvider)
 
 	resp := checker.Check()
@@ -120,20 +148,20 @@ func TestCheck_SimpleProvider(t *testing.T) {
 func TestIsHealthy(t *testing.T) {
 	t.Run("Provider ready", func(t *testing.T) {
 		provider := &MockStatusProvider{ready: true}
-		modeProvider := &MockModeProvider{browserMode: true}
+		modeProvider := &MockModeProvider{mode: "browser"}
 		checker := NewChecker(provider, nil, modeProvider)
 		assert.True(t, checker.IsHealthy())
 	})
 
 	t.Run("Provider not ready", func(t *testing.T) {
 		provider := &MockStatusProvider{ready: false}
-		modeProvider := &MockModeProvider{browserMode: true}
+		modeProvider := &MockModeProvider{mode: "browser"}
 		checker := NewChecker(provider, nil, modeProvider)
 		assert.False(t, checker.IsHealthy())
 	})
 
 	t.Run("No provider", func(t *testing.T) {
-		modeProvider := &MockModeProvider{browserMode: false}
+		modeProvider := &MockModeProvider{mode: "terminal"}
 		checker := NewChecker(nil, nil, modeProvider)
 		assert.True(t, checker.IsHealthy())
 	})

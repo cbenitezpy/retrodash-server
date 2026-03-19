@@ -39,17 +39,20 @@ func (m *mockClientCounter) ActiveClients() int {
 
 // mockModeProvider implements health.ModeProvider
 type mockModeProvider struct {
-	browserMode bool
+	mode string
 }
 
-func (m *mockModeProvider) IsBrowserMode() bool {
-	return m.browserMode
+func (m *mockModeProvider) Mode() string {
+	if m.mode != "" {
+		return m.mode
+	}
+	return "browser"
 }
 
 func TestHealthHandler_OK(t *testing.T) {
 	browser := &mockBrowserStatus{ready: true}
 	clients := &mockClientCounter{count: 2}
-	modeProvider := &mockModeProvider{browserMode: true}
+	modeProvider := &mockModeProvider{mode: "browser"}
 	checker := health.NewChecker(browser, clients, modeProvider)
 	handlers := NewHandlers(checker)
 
@@ -76,7 +79,7 @@ func TestHealthHandler_Error(t *testing.T) {
 		ready:     false,
 		lastError: ErrBrowserNotReady,
 	}
-	modeProvider := &mockModeProvider{browserMode: true}
+	modeProvider := &mockModeProvider{mode: "browser"}
 	checker := health.NewChecker(browser, nil, modeProvider)
 	handlers := NewHandlers(checker)
 
@@ -96,7 +99,7 @@ func TestHealthHandler_Error(t *testing.T) {
 }
 
 func TestHealthHandler_MethodNotAllowed(t *testing.T) {
-	modeProvider := &mockModeProvider{browserMode: true}
+	modeProvider := &mockModeProvider{mode: "browser"}
 	checker := health.NewChecker(nil, nil, modeProvider)
 	handlers := NewHandlers(checker)
 
@@ -110,7 +113,7 @@ func TestHealthHandler_MethodNotAllowed(t *testing.T) {
 
 func TestHealthHandler_NoBrowser(t *testing.T) {
 	// No browser configured yet (startup)
-	modeProvider := &mockModeProvider{browserMode: true}
+	modeProvider := &mockModeProvider{mode: "browser"}
 	checker := health.NewChecker(nil, nil, modeProvider)
 	handlers := NewHandlers(checker)
 

@@ -43,14 +43,33 @@ func NewSourceSwitcher(cfg *config.Config, originManager *origins.Manager) *Sour
 }
 
 // StartInitialSource starts the initial source based on DASHBOARD_URL.
+// If DashboardURL is empty, the server starts in standby mode (no-op).
 func (s *SourceSwitcher) StartInitialSource(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.cfg.DashboardURL == "" {
+		return nil
+	}
 
 	if terminal.IsCommandURL(s.cfg.DashboardURL) {
 		return s.startTerminalLocked(ctx, s.cfg.DashboardURL)
 	}
 	return s.startBrowserLocked(ctx, s.cfg.DashboardURL)
+}
+
+// Mode returns the current operating mode: "browser", "terminal", or "standby".
+func (s *SourceSwitcher) Mode() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.chromeBrowser != nil && s.currentProvider == s.chromeBrowser {
+		return "browser"
+	}
+	if s.terminal != nil && s.currentProvider == s.terminal {
+		return "terminal"
+	}
+	return "standby"
 }
 
 // SwitchToOrigin switches the stream source to the specified origin.
@@ -231,13 +250,6 @@ func (s *SourceSwitcher) Stop() {
 
 	s.stopBrowserLocked()
 	s.stopTerminalLocked()
-}
-
-// IsBrowserMode returns true if currently in browser mode.
-func (s *SourceSwitcher) IsBrowserMode() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.chromeBrowser != nil && s.currentProvider == s.chromeBrowser
 }
 
 // getOriginURL returns the URL/command for an origin.
