@@ -38,6 +38,11 @@ Then open in your browser:
 
 {{- end }}
 
+Verify installation:
+
+  kubectl port-forward svc/{{ include "retrodash-bridge.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }} -n {{ .Release.Namespace }} &
+  curl -s http://localhost:{{ .Values.service.port }}/health | head -1
+
 Health endpoints:
   /healthz  - Liveness probe (K8s)
   /readyz   - Readiness probe (K8s)
