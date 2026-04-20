@@ -6,6 +6,7 @@ Go-based MJPEG streaming server using ChromeDP for headless browser automation. 
 
 - Headless Chrome/Chromium rendering via ChromeDP
 - MJPEG streaming with quality selection (high/low)
+- **Embedded web UI** — open `http://server:8080/` in any browser for a zero-install viewer (react-native-web bundle baked into the binary via `//go:embed`)
 - Multi-source switching (dashboards, SSH terminals, local commands)
 - Touch event relay (tap, drag)
 - Kubernetes-native health probes (`/healthz`, `/readyz`)
@@ -70,15 +71,16 @@ docker run --rm \
 
 ### Verify it works
 
-Open the stream in your browser to confirm the server is rendering your dashboard:
+Open the bridge in your browser to confirm the server is rendering your dashboard:
 
 ```bash
-open http://localhost:8080/stream
+open http://localhost:8080/          # zero-install web UI (CRT viewer + channels + settings)
+# or open http://localhost:8080/stream for the raw MJPEG feed
 # or: curl -I http://localhost:8080/stream
 # or: vlc http://localhost:8080/stream
 ```
 
-You should see your Grafana dashboard streaming as a live video feed. Once confirmed, install the [RetroDash app](https://github.com/cbenitezpy/retrodash/releases) on your tablet.
+Since feature 053 (web UI), the root URL serves a react-native-web bundle embedded into the binary — you see the same retro CRT channel list + viewer as the mobile app, no install required. The raw `/stream` endpoint remains available for VLC, mpv, or the native [RetroDash app](https://github.com/cbenitezpy/retrodash/releases).
 
 ### Docker Compose
 
@@ -207,6 +209,26 @@ All configuration is via environment variables:
 
 ## API Endpoints
 
+### GET /
+
+Serves the embedded react-native-web viewer. Returns the SPA shell
+(`index.html`) with `Cache-Control: no-store`. Any client-side route
+that does not match a more specific endpoint also falls through to
+this shell when the `Accept` header includes `text/html` — other
+Accept types get a 404 so API misses are not masked.
+
+```bash
+open http://localhost:8080/
+# channel list auto-populates from /api/origins; tap → TUNE IN → live stream.
+```
+
+### GET /static/{path}
+
+Hashed JS/CSS/image assets emitted by the webpack build. Served from
+the embedded bundle with `Cache-Control: public, max-age=31536000,
+immutable`. Paths that try to escape the `static/` prefix (e.g.
+`/static/../secret`) return 404.
+
 ### GET /healthz
 
 Kubernetes liveness probe. Returns `200 "ok"` if the server process is alive.
@@ -327,9 +349,13 @@ retrodash-server/
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.25+
 - Chrome or Chromium browser
 - golangci-lint (for linting)
+- Node 20/22 (only if you want to rebuild the embedded web UI bundle;
+  the CI pipeline does this automatically and the binary runs fine
+  without the bundle present — it just logs a "web UI disabled" notice
+  and still serves the full API)
 
 ### Make Targets
 
